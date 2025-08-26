@@ -8,7 +8,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: sammy
+  IMAGE_NAME: sammy   # ✅ always lowercase here
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
 
 jobs:
@@ -31,14 +31,20 @@ jobs:
         id: timestamp
         run: echo "TIMESTAMP_TAG=$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
 
+      # 👇 Force lowercase on image name in case someone edits it later
+      - name: Force lowercase image name
+        id: imagename
+        run: |
+          echo "IMAGE_NAME_LOWER=$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.timestamp.outputs.TIMESTAMP_TAG }}
+            ${{ env.REGISTRY }}/${{ env.DOCKERHUB_USERNAME }}/${{ steps.imagename.outputs.IMAGE_NAME_LOWER }}:latest
+            ${{ env.REGISTRY }}/${{ env.DOCKERHUB_USERNAME }}/${{ steps.imagename.outputs.IMAGE_NAME_LOWER }}:${{ steps.timestamp.outputs.TIMESTAMP_TAG }}
 
   deploy:
     needs: build-and-push
@@ -52,7 +58,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       # - name: Pull and run
       #   run: |
       #     docker stop Helen || true
